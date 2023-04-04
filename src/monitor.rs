@@ -1,11 +1,11 @@
 use std::path::Path;
 use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
-use std::sync::mpsc;
+use std::sync::mpsc::channel;
 
 pub fn watch_directory(path: &str) -> Result<(), notify::Error> {
-  let (tx, rx) = mpsc::channel();
+  let (tx, rx) = channel();
 
-  let mut watcher =RecommendedWatcher::new(tx, Config::default())?;
+  let mut watcher = RecommendedWatcher::new(tx, Config::default())?;
 
   watcher.watch(Path::new(path), RecursiveMode::Recursive)?;
 
