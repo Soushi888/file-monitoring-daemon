@@ -2,26 +2,26 @@ mod cli;
 mod daemon;
 mod monitor;
 
-// use monitor::watch_directory;
+use monitor::watch_directory;
+use daemon::start_daemon;
 
 use std::fs;
+use notify::Error;
 use toml;
 use serde::Deserialize;
-use notify::{RecursiveMode, Watcher};
-use std::path::Path;
-use crate::monitor::watch_directory;
+use crate::cli::start_cli;
 
 #[derive(Debug, Deserialize)]
-struct Config {
+pub struct Config {
   location: String,
+  excludes: Vec<String>,
 }
 
-fn main() -> Result<(), notify::Error> {
-  let location = get_config().location;
-  watch_directory(&location)
+fn main() -> Result<(), Error> {
+  start_cli()
 }
 
-fn get_config() -> Config {
-  let config_file = fs::read_to_string("config.toml").expect("Unable to read config file");
+pub fn get_config() -> Config {
+  let config_file = fs::read_to_string("./config.toml").expect("Unable to read config file");
   toml::from_str::<Config>(&config_file).expect("Unable to parse config file")
 }
