@@ -2,11 +2,11 @@ use std::path::Path;
 use std::fs::File;
 use std::io::Write;
 use serde_json;
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 use walkdir::WalkDir;
 use crate::get_config;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct FileData {
   pub path: String,
   pub content: String,
@@ -48,8 +48,30 @@ impl FileData {
     file.write_all(self.content.as_bytes()).map_err(Error::Io)
   }
 
-  pub fn write_on_dht(&self) -> Result<(), Error> {
-    unimplemented!("Function that will write a file on the DHT")
+  pub fn save(&self) -> Result<(), Error> {
+    let file = File::open("./files.json").map_err(Error::Io)?;
+    let mut files: Vec<FileData> = serde_json::from_reader(file).map_err(Error::Json)?;
+
+    if let Some(index) = files.iter().position(|file| file.path == self.path) {
+      files[index] = self.clone();
+    } else {
+      files.push(self.clone());
+    }
+
+    let file = File::create("./files.json").map_err(Error::Io)?;
+    serde_json::to_writer_pretty(file, &files).map_err(Error::Json)
+  }
+
+  pub fn delete(&self) -> Result<(), Error> {
+    let file = File::open("./files.json").map_err(Error::Io)?;
+    let mut files: Vec<FileData> = serde_json::from_reader(file).map_err(Error::Json)?;
+
+    if let Some(index) = files.iter().position(|file| file.path == self.path) {
+      files.remove(index);
+    }
+
+    let file = File::create("./files.json").map_err(Error::Io)?;
+    serde_json::to_writer_pretty(file, &files).map_err(Error::Json)
   }
 }
 

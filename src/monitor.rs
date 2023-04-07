@@ -5,7 +5,7 @@ use notify::{RecursiveMode};
 use notify_debouncer_mini::{new_debouncer};
 use std::sync::mpsc::channel;
 use std::time::{Duration, SystemTime};
-use crate::file::get_all_files_from_fs;
+use crate::file::{FileData, get_all_files_from_fs};
 use crate::get_config;
 
 #[derive(Debug, PartialEq)]
@@ -87,7 +87,22 @@ pub fn watch_directory(path: &str, excludes: Vec<String>) -> Result<(), notify::
           if excluded { continue; }
 
           let change_type = process_change_event(&mut state, &event.path);
-          println!("File {:?} : {:?}", change_type, event.path);
+          let files_from_fs = get_all_files_from_fs(path);
+          let full_path = match files_from_fs.into_iter().find(|file| file.contains(event.path.to_str().unwrap())) {
+            Some(full_path) => full_path,
+            None => event.path.to_str().unwrap().to_string()
+          };
+
+          println!("File {:?} : {:?}", change_type, &full_path);
+
+          if let ChangeType::Created | ChangeType::Modified = change_type {
+            let file = FileData::new(full_path.clone(), fs::read_to_string(&full_path).unwrap());
+            file.save().unwrap();
+          }
+          if let ChangeType::Removed = change_type {
+            let file = FileData::new(full_path.clone(), "".to_string());
+            file.delete().unwrap();
+          }
         }
       }
       Err(e) => eprintln!("watch error: {:?}", e),
