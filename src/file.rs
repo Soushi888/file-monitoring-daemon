@@ -3,6 +3,7 @@ use std::fs::File;
 use std::io::Write;
 use serde_json;
 use serde::Deserialize;
+use walkdir::WalkDir;
 use crate::get_config;
 
 #[derive(Debug, Deserialize)]
@@ -52,7 +53,7 @@ impl FileData {
   }
 }
 
-pub fn get_all_files() -> Result<Vec<FileData>, Error> {
+pub fn get_all_files_from_mock() -> Result<Vec<FileData>, Error> {
   let path = Path::new("./files.json");
   let file = match File::open(path) {
     Ok(file) => file,
@@ -67,20 +68,23 @@ pub fn get_all_files() -> Result<Vec<FileData>, Error> {
     file.write_on_fs()?;
   }
 
-  println!("Files synced from DHT to FS: {:#?}", files);
+  println!("Files synced from mock to FS: {:#?}", files);
 
   Ok(files)
 }
 
-// #[allow(dead_code)]
-// pub fn get_files(directory_path: &str) -> Result<(), Error> {
-//   unimplemented!("Function that will get files from the DHT for a given directory path")
-// }
-//
-// #[allow(dead_code)]
-// pub fn get_file(path: &str) -> Result<String, Error> {
-//   unimplemented!("Function that will get a file from the DHT")
-// }
+pub fn get_all_files_from_fs(path: &str) -> Vec<String> {
+  let mut file_paths = vec![];
+
+  let files = WalkDir::new(path).into_iter().filter_map(Result::ok).filter(|e| e.file_type().is_file());
+
+  for entry in files {
+    let path_str = entry.path().to_str().unwrap().to_string();
+    file_paths.push(path_str);
+  }
+
+  file_paths
+}
 
 
 // Tests

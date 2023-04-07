@@ -1,7 +1,6 @@
 use std::fs::File;
 
 use std::io::{Read};
-use std::process;
 use std::process::Command;
 use daemonize::Daemonize;
 
@@ -12,7 +11,6 @@ pub fn start_daemon() {
     Ok(_) => {
       println!("Daemon already running");
       return;
-      // process::exit(1);
     }
     Err(_) => (),
   };

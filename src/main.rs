@@ -10,7 +10,7 @@ use std::{fs, process};
 use toml;
 use serde::Deserialize;
 use crate::daemon::get_logs;
-use crate::file::{get_all_files};
+use crate::file::{get_all_files_from_mock};
 
 #[derive(Debug, Deserialize, Default)]
 pub struct Config {
@@ -84,7 +84,7 @@ pub fn main() {
       get_logs().expect("Unable to get logs");
     }
     Commands::GetFiles => {
-      get_all_files().expect("Unable to get files");
+      get_all_files_from_mock().expect("Unable to get files");
     }
   }
 
