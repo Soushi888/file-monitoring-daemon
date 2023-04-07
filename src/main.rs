@@ -1,20 +1,39 @@
 mod daemon;
 mod monitor;
+mod file;
 
 use daemon::{start_daemon, stop_daemon, status};
 use crate::monitor::watch_directory;
 
 use clap::{Parser, Subcommand};
-use std::fs;
+use std::{fs, process};
+use std::path::Path;
 use notify::Error;
 use toml;
 use serde::Deserialize;
-use crate::cli::start_cli;
+use crate::daemon::get_logs;
+use crate::file::{get_all_files, get_files};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 pub struct Config {
   location: String,
-  excludes: Vec<String>,
+  excludes: Option<Vec<String>>,
+}
+
+impl Config {
+  fn default() -> Self {
+    Self {
+      location: String::from("./files"),
+      excludes: Some(Vec::new()),
+    }
+  }
+}
+
+pub fn get_config() -> Config {
+  match fs::read_to_string("./config.toml") {
+    Ok(config) => toml::from_str(&config).unwrap(),
+    Err(_) => Config::default(),
+  }
 }
 
 #[derive(Parser, Debug)]
@@ -34,37 +53,42 @@ enum Commands {
   Status,
   #[command(name = "restart", about = "Restart the daemon")]
   Restart,
+  #[command(name = "log", about = "Get the daemon log")]
+  Log,
+  #[command(name = "get-files", about = "Get the files")]
+  GetFiles,
 }
 
-pub fn main() -> Result<(), Error> {
+pub fn main() {
+  let config = get_config();
+  let location = config.location;
+  let excluded = config.excludes.unwrap_or(Vec::new());
   let cli = Cli::parse();
 
   match &cli.command {
     Commands::Start => {
       start_daemon();
-      let location = get_config().location;
-      watch_directory(&location)
+      watch_directory(&location, excluded.clone()).expect("Unable to watch directory");
     }
     Commands::Stop => {
       stop_daemon();
-      Ok(())
     }
     Commands::Status => {
       let result = if status() { "running" } else { "stopped" };
       println!("Daemon is {}", result);
-      info!("Daemon is {}", result);
-      Ok(())
     }
     Commands::Restart => {
       stop_daemon();
       start_daemon();
-      let location = get_config().location;
-      watch_directory(&location)
+      watch_directory(&location, excluded.clone()).expect("Unable to watch directory");
+    }
+    Commands::Log => {
+      get_logs().expect("Unable to get logs");
+    }
+    Commands::GetFiles => {
+      get_all_files().expect("Unable to get files");
     }
   }
-}
 
-pub fn get_config() -> Config {
-  let config_file = fs::read_to_string("./config.toml").expect("Unable to read config file");
-  toml::from_str::<Config>(&config_file).expect("Unable to parse config file")
+  process::exit(1);
 }

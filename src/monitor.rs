@@ -1,10 +1,11 @@
 use std::path::Path;
 use notify::{Config, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::sync::mpsc::channel;
+use log::{info, error};
 use notify::event::ModifyKind;
 use crate::get_config;
 
-pub fn watch_directory(path: &str) -> Result<(), notify::Error> {
+pub fn watch_directory(path: &str, excludes: Vec<String>) -> Result<(), notify::Error> {
   let (tx, rx) = channel();
 
   let mut watcher = RecommendedWatcher::new(tx, Config::default())?;
@@ -15,25 +16,13 @@ pub fn watch_directory(path: &str) -> Result<(), notify::Error> {
     match res {
       Ok(event) => {
         let path = event.paths[0].to_str().unwrap();
-        let excluded = get_config().excludes.iter().any(|x| path.contains(x));
 
+        let excluded = excludes.iter().any(|exclude| path.contains(exclude));
         if excluded { continue; }
 
-        match event.kind {
-            EventKind::Create(_) => println!("created: {:?}", event),
-            EventKind::Modify(ref data_type) => {
-              match data_type {
-                ModifyKind::Name(_) => println!("renamed: {:?}", event),
-                ModifyKind::Data(_) => println!("modified: {:?}", event),
-                _ => println!("unknown: {:?}", event),
-              }
-            },
-            EventKind::Remove(_) => println!("removed: {:?}", event),
-            EventKind::Other => println!("other: {:?}", event),
-            _ => println!("unknown: {:?}", event),
-          }
+        println!("File changed : {:?}", event.paths[0].to_str().unwrap());
         },
-      Err(e) => println!("watch error: {:?}", e),
+      Err(e) => error!("watch error: {:?}", e),
     }
   }
 

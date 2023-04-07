@@ -1,11 +1,22 @@
 use std::fs::File;
+
 use std::io::{Read};
+use std::process;
 use std::process::Command;
 use daemonize::Daemonize;
+use log::{error, info};
 
 const PID_FILE: &str = "/tmp/file_watcher.pid";
 
 pub fn start_daemon() {
+  let mut file = match File::open(PID_FILE) {
+    Ok(_) => {
+      println!("Daemon already running");
+      process::exit(1);
+    }
+    Err(_) => (),
+  };
+
   let stdout = File::create("/tmp/file_watcher.stdout.log").expect("Unable to create stdout file");
   let stderr = File::create("/tmp/file_watcher.stderr.log").expect("Unable to create stderr file");
 
@@ -18,8 +29,8 @@ pub fn start_daemon() {
     .stderr(stderr); // Redirect stderr to a log file
 
   match daemonize.start() {
-    Ok(_) => println!("Success, daemonized"),
-    Err(e) => eprintln!("Error, {}", e),
+    Ok(_) => info!("Success, daemonized"),
+    Err(e) => error!("Error, {}", e),
   }
 }
 
@@ -27,7 +38,7 @@ pub fn stop_daemon() {
   let mut file = match File::open(PID_FILE) {
     Ok(file) => file,
     Err(_) => {
-      eprintln!("No daemon running");
+      println!("No daemon running");
       return;
     }
   };
@@ -82,4 +93,13 @@ pub fn status() -> bool {
   }
 
   true
+}
+
+pub fn get_logs() -> Result<(), std::io::Error> {
+  let mut logs = String::new();
+  let mut log_file = File::open("/tmp/file_watcher.stdout.log")?;
+  log_file.read_to_string(&mut logs)?;
+
+  println!("{}", logs);
+  Ok(())
 }
