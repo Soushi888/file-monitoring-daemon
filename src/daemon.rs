@@ -39,12 +39,6 @@ pub fn stop_daemon() {
     return;
   }
 
-  // if let Err(e) = &pid.parse::<u32>() {
-  //   eprintln!("{pid}");
-  //   eprintln!("Unable to parse pid: {}", e);
-  //   return;
-  // }
-
   let pid = match pid.trim().parse::<u32>() {
     Ok(pid) => pid,
     Err(_) => {
@@ -70,4 +64,22 @@ pub fn stop_daemon() {
   }
 
   println!("Stopped daemon");
+}
+
+pub fn status() -> bool {
+  let mut file = match File::open(PID_FILE) {
+    Ok(file) => file,
+    Err(_) => return false,
+  };
+
+  let mut pid = String::new();
+  if file.read_to_string(&mut pid).is_err() {
+    return false;
+  }
+
+  if pid.trim().parse::<u32>().is_err() {
+    return false;
+  }
+
+  true
 }
