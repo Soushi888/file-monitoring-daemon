@@ -1,28 +1,27 @@
 use std::path::Path;
-use notify::{Config, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+use notify::{Config, RecursiveMode, RecommendedWatcher, Watcher};
+use notify_debouncer_mini::{DebounceEventResult, new_debouncer};
 use std::sync::mpsc::channel;
-use log::{info, error};
-use notify::event::ModifyKind;
-use crate::get_config;
+use std::time::Duration;
 
 pub fn watch_directory(path: &str, excludes: Vec<String>) -> Result<(), notify::Error> {
   let (tx, rx) = channel();
 
-  let mut watcher = RecommendedWatcher::new(tx, Config::default())?;
+  let mut debouncer = new_debouncer(Duration::from_secs(1), None, tx).unwrap();
 
-  watcher.watch(Path::new(path), RecursiveMode::Recursive)?;
+  debouncer.watcher().watch(Path::new(path), RecursiveMode::Recursive)?;
 
   for res in rx {
     match res {
-      Ok(event) => {
-        let path = event.paths[0].to_str().unwrap();
+      Ok(events) => {
+        for event in events {
+          let excluded = excludes.iter().any(|exclude| event.path.to_str().unwrap().contains(exclude));
+          if excluded { continue; }
 
-        let excluded = excludes.iter().any(|exclude| path.contains(exclude));
-        if excluded { continue; }
-
-        println!("File changed : {:?}", event.paths[0].to_str().unwrap());
-        },
-      Err(e) => error!("watch error: {:?}", e),
+          println!("File changed : {:?}", event.path);
+        }
+      }
+      Err(e) => eprintln!("watch error: {:?}", e),
     }
   }
 

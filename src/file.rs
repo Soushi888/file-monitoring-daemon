@@ -30,7 +30,6 @@ impl FileData {
     let root = get_config().location;
     let path = Path::new(&root).join(&self.path);
 
-
     if let Some(parent) = path.parent() {
       if !parent.exists() {
         std::fs::create_dir_all(parent).map_err(Error::Io)?;
@@ -73,15 +72,15 @@ pub fn get_all_files() -> Result<Vec<FileData>, Error> {
   Ok(files)
 }
 
-#[allow(dead_code)]
-pub fn get_files(directory_path: &str) -> Result<(), Error> {
-  unimplemented!("Function that will get files from the DHT for a given directory path")
-}
-
-#[allow(dead_code)]
-pub fn get_file(path: &str) -> Result<String, Error> {
-  unimplemented!("Function that will get a file from the DHT")
-}
+// #[allow(dead_code)]
+// pub fn get_files(directory_path: &str) -> Result<(), Error> {
+//   unimplemented!("Function that will get files from the DHT for a given directory path")
+// }
+//
+// #[allow(dead_code)]
+// pub fn get_file(path: &str) -> Result<String, Error> {
+//   unimplemented!("Function that will get a file from the DHT")
+// }
 
 
 // Tests

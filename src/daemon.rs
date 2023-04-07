@@ -4,15 +4,15 @@ use std::io::{Read};
 use std::process;
 use std::process::Command;
 use daemonize::Daemonize;
-use log::{error, info};
 
 const PID_FILE: &str = "/tmp/file_watcher.pid";
 
 pub fn start_daemon() {
-  let mut file = match File::open(PID_FILE) {
+  match File::open(PID_FILE) {
     Ok(_) => {
       println!("Daemon already running");
-      process::exit(1);
+      return;
+      // process::exit(1);
     }
     Err(_) => (),
   };
@@ -29,8 +29,8 @@ pub fn start_daemon() {
     .stderr(stderr); // Redirect stderr to a log file
 
   match daemonize.start() {
-    Ok(_) => info!("Success, daemonized"),
-    Err(e) => error!("Error, {}", e),
+    Ok(_) => println!("Daemon started"),
+    Err(e) => eprintln!("Error, {}", e),
   }
 }
 

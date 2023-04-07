@@ -7,12 +7,10 @@ use crate::monitor::watch_directory;
 
 use clap::{Parser, Subcommand};
 use std::{fs, process};
-use std::path::Path;
-use notify::Error;
 use toml;
 use serde::Deserialize;
 use crate::daemon::get_logs;
-use crate::file::{get_all_files, get_files};
+use crate::file::{get_all_files};
 
 #[derive(Debug, Deserialize, Default)]
 pub struct Config {
