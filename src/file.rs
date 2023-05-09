@@ -4,6 +4,7 @@ use serde_json;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
+use thiserror::Error;
 use walkdir::WalkDir;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -12,9 +13,11 @@ pub struct FileData {
     pub content: String,
 }
 
-#[derive(Debug)]
-pub enum Error {
+#[derive(Error, Debug)]
+pub enum FileError {
+    #[error("IO error: {0}")]
     Io(std::io::Error),
+    #[error("Json error: {0}")]
     Json(serde_json::Error),
 }
 
@@ -24,13 +27,13 @@ impl FileData {
         Self { path, content }
     }
 
-    pub fn write_on_fs(&self) -> Result<(), Error> {
+    pub fn write_on_fs(&self) -> Result<(), FileError> {
         let root = get_config().location;
         let path = Path::new(&root).join(&self.path);
 
         if let Some(parent) = path.parent() {
             if !parent.exists() {
-                std::fs::create_dir_all(parent).map_err(Error::Io)?;
+                std::fs::create_dir_all(parent).map_err(FileError::Io)?;
             }
         }
 
@@ -38,16 +41,17 @@ impl FileData {
             Ok(file) => file,
             Err(err) => {
                 eprintln!("Error creating file: {}", err);
-                return Err(Error::Io(err));
+                return Err(FileError::Io(err));
             }
         };
 
-        file.write_all(self.content.as_bytes()).map_err(Error::Io)
+        file.write_all(self.content.as_bytes())
+            .map_err(FileError::Io)
     }
 
-    pub fn save(&self) -> Result<(), Error> {
-        let file = File::open("./files.json").map_err(Error::Io)?;
-        let mut files: Vec<FileData> = serde_json::from_reader(file).map_err(Error::Json)?;
+    pub fn save(&self) -> Result<(), FileError> {
+        let file = File::open("./files.json").map_err(FileError::Io)?;
+        let mut files: Vec<FileData> = serde_json::from_reader(file).map_err(FileError::Json)?;
 
         if let Some(index) = files.iter().position(|file| file.path == self.path) {
             files[index] = self.clone();
@@ -55,24 +59,24 @@ impl FileData {
             files.push(self.clone());
         }
 
-        let file = File::create("./files.json").map_err(Error::Io)?;
-        serde_json::to_writer_pretty(file, &files).map_err(Error::Json)
+        let file = File::create("./files.json").map_err(FileError::Io)?;
+        serde_json::to_writer_pretty(file, &files).map_err(FileError::Json)
     }
 
-    pub fn delete(&self) -> Result<(), Error> {
-        let file = File::open("./files.json").map_err(Error::Io)?;
-        let mut files: Vec<FileData> = serde_json::from_reader(file).map_err(Error::Json)?;
+    pub fn delete(&self) -> Result<(), FileError> {
+        let file = File::open("./files.json").map_err(FileError::Io)?;
+        let mut files: Vec<FileData> = serde_json::from_reader(file).map_err(FileError::Json)?;
 
         if let Some(index) = files.iter().position(|file| file.path == self.path) {
             files.remove(index);
         }
 
-        let file = File::create("./files.json").map_err(Error::Io)?;
-        serde_json::to_writer_pretty(file, &files).map_err(Error::Json)
+        let file = File::create("./files.json").map_err(FileError::Io)?;
+        serde_json::to_writer_pretty(file, &files).map_err(FileError::Json)
     }
 }
 
-pub fn get_all_files_from_mock() -> Result<Vec<FileData>, Error> {
+pub fn get_all_files_from_mock() -> Result<Vec<FileData>, FileError> {
     let path = Path::new("./files.json");
     let file = match File::open(path) {
         Ok(file) => file,
@@ -81,7 +85,7 @@ pub fn get_all_files_from_mock() -> Result<Vec<FileData>, Error> {
             return Ok(vec![]);
         }
     };
-    let files: Vec<FileData> = serde_json::from_reader(file).map_err(Error::Json)?;
+    let files: Vec<FileData> = serde_json::from_reader(file).map_err(FileError::Json)?;
 
     for file in files.iter() {
         file.write_on_fs()?;
